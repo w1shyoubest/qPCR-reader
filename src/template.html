@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>qPCR Reader for QuantStudio</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#16213e">
+<meta name="apple-mobile-web-app-title" content="qPCR Reader">
+
+<style>
+:root{--bg:#ffffff;--ink:#1d2329;--muted:#5d6670;--line:#dde1e5;--panel:#f4f6f7;--accent:#1F3FD1;--warn:#9a5b00;--warnbg:#fff4e0;--pos:#0A7A44;--bad:#B0171F;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#14181c;--ink:#e6e9ec;--muted:#9aa4ad;--line:#2b3238;--panel:#1b2025;--accent:#7d96ff;--warn:#f0b54d;--warnbg:#2b2213;--pos:#4fd08e;--bad:#ff7b7b;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:24px;margin:0;font-weight:650;letter-spacing:-.01em}
+h2{font-size:17px;margin:34px 0 10px;font-weight:600}
+#intro{display:grid;grid-template-columns:1fr minmax(280px,420px);gap:24px;align-items:center;margin-bottom:8px}
+#intro p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+#intro.compact{grid-template-columns:1fr minmax(260px,360px)}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;background:var(--panel);transition:border-color .15s}
+#drop.over{border-color:var(--accent)}
+#drop label{color:var(--accent);cursor:pointer;text-decoration:underline}
+#drop small{display:block;color:var(--muted);margin-top:6px}
+.status{margin:8px 0 0;color:var(--muted)}.status.error{color:var(--bad)}
+#runinfo{padding:10px 0;border-bottom:1px solid var(--line);color:var(--muted)}
+#runinfo b{color:var(--ink)}
+#warn{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 14px;margin-top:10px}
+#warn p{margin:4px 0}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--c);color:var(--c);font-size:13px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;background:var(--panel);border-radius:8px;padding:10px 14px;margin:14px 0}
+.bar label{display:flex;align-items:center;gap:6px}
+.bar input[type=number]{width:84px;font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.bar .lab{color:var(--muted);font-size:13px}
+button,select{font:inherit;font-size:13px;padding:5px 11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;cursor:pointer}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+#layout{overflow-x:auto}#layout svg{display:block;max-width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin-top:6px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--c);opacity:.85;margin-right:5px;vertical-align:-1px}
+.dot.ntc{background:transparent;border:1.5px dashed var(--muted)}.dot.flag{background:transparent;border:2px solid #D08700}.dot.exc{background:var(--muted);opacity:.35}
+.hint{color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted);margin:4px 0}
+.filters label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.plot{position:relative;height:460px;background:var(--panel);border-radius:8px;padding:10px}
+#hov{font-size:13px;color:var(--muted);min-height:20px;margin:6px 0 0}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);white-space:nowrap}
+td.bad{color:var(--bad);font-weight:600}td.pos{color:var(--pos);font-weight:600}
+.sd{color:var(--muted);font-weight:400;font-size:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+details summary{cursor:pointer;color:var(--accent);margin:10px 0}
+footer{margin-top:40px;color:var(--muted);font-size:13px}
+#tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px;border-bottom:1px solid var(--line)}
+.tab{display:inline-flex;align-items:center;gap:6px;padding:7px 10px 7px 12px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;color:var(--muted);background:var(--panel);font-size:14px}
+.tab.on{color:var(--ink);background:var(--bg);font-weight:600;margin-bottom:-1px;border-bottom:1px solid var(--bg)}
+.tab.cmp{font-weight:600}
+.tab .x{border:none;background:none;padding:0 2px;font-size:16px;line-height:1;color:var(--muted)}
+#method{color:var(--muted);font-size:14px;padding:6px 0}#method b{color:var(--ink)}
+#thtarget{display:flex;flex-wrap:wrap;gap:6px 14px}
+.chartbox{position:relative;height:340px;background:var(--panel);border-radius:8px;padding:10px}
+td.small{font-size:13px;color:var(--muted)}
+#olist{display:flex;flex-wrap:wrap;gap:10px 24px;font-size:13px;color:var(--muted);margin:8px 0}
+.ogroup{display:flex;flex-direction:column;gap:2px}.ogroup b{color:var(--ink);margin-bottom:2px}.ogroup label{display:flex;gap:4px;align-items:center;cursor:pointer}
+.ls{display:inline-block;width:20px;height:0;border-top:2px solid var(--ink);margin-right:4px}.ls1{border-top-style:dashed}.ls2{border-top-style:dotted}
+@media (max-width:720px){#intro,#intro.compact{grid-template-columns:1fr}.plot{height:360px}}
+</style>
+</head>
+<body>
+<main>
+<section id="intro">
+  <div>
+    <h1>qPCR Reader for QuantStudio</h1>
+    <p>Open one or more QuantStudio runs to see plate layouts, amplification and multicomponent plots, Cts, QC flags and ΔCt, and to compare plates side by side. Files are read on this computer; nothing is uploaded.</p>
+  </div>
+  <div id="drop">
+    <div>Drop run files here, or <label for="file">choose files</label></div>
+    <small>.eds, or an export (.xls, .xlsx, .ods) with Amplification Data, Sample Setup and Results</small>
+    <input type="file" id="file" accept=".eds,.xls,.xlsx,.ods" multiple hidden>
+    <p id="status" class="status" role="status"></p>
+  </div>
+</section>
+
+<div id="app" hidden>
+  <div id="tabs" role="tablist"></div>
+
+  <section id="plateview">
+  <div id="runinfo"></div>
+  <div id="method"></div>
+  <div id="warn" hidden></div>
+
+  <div class="bar">
+    <span class="lab">Threshold</span>
+    <label><input type="radio" name="thm" value="shared"> Shared</label>
+    <label><input type="radio" name="thm" value="target"> Per target (like QuantStudio)</label>
+    <span id="thshared"><label><span class="lab">ΔRn</span><input type="number" id="th" step="any" min="0"></label></span>
+    <span id="thtarget"></span>
+    <button id="auto">Auto</button>
+    <span class="lab">Baseline</span>
+    <label><input type="radio" name="bl" value="instrument"> Instrument</label>
+    <label><input type="radio" name="bl" value="fixed"> Fixed cycles</label>
+    <label><input type="number" id="bs" min="1" style="width:56px"> to <input type="number" id="be" min="2" style="width:56px"></label>
+  </div>
+
+  <h2>Plate layout</h2>
+  <div class="row"><span id="selinfo" class="hint"></span><button id="selclear">Clear selection</button><button id="selexc">Exclude selected</button><button id="selinc">Include selected</button></div>
+  <div id="layout"></div>
+  <div class="legend" id="layoutlegend"></div>
+
+  <h2>Curves</h2>
+  <div class="row">
+    <span class="hint">Plot</span><button data-plot="drn">Amplification (ΔRn)</button><button data-plot="rn">Rn</button><button data-plot="mc">Multicomponent (FAM, ROX)</button>
+    <span class="hint" style="margin-left:10px">Scale</span><button data-scale="log">Log</button><button data-scale="linear">Linear</button>
+    <span class="hint" style="margin-left:10px">Color by</span><button data-color="target">Target</button><button data-color="sample">Sample</button>
+    <label class="hint" style="margin-left:10px"><input type="checkbox" id="showexc"> Show excluded wells</label>
+  </div>
+  <div class="filters" id="tfilter"></div>
+  <div class="row"><span class="hint">Samples</span><button id="sall">All</button><button id="snone">None</button></div>
+  <div class="filters" id="sfilter"></div>
+  <div class="plot"><canvas id="chart" role="img" aria-label="Curves for the selected wells">Curves</canvas></div>
+  <p id="mcnote" class="hint" hidden>This file has no multicomponent data. Use the .eds file, or export "Multicomponent Data" or "Raw Data" from QuantStudio.</p>
+  <p id="hov">Hover a curve to see its well, sample and Ct.</p>
+
+  <h2>QC flags</h2>
+  <div class="row"><span id="qccount" class="hint"></span><button id="excall">Exclude all flagged (except NTC and no-amp)</button><button id="exclear">Clear exclusions</button></div>
+  <div class="tablewrap" id="qc"></div>
+
+  <h2>ΔCt</h2>
+  <div class="row">
+    <label class="hint">Target <select id="dtarget"></select></label>
+    <label class="hint">Baseline <select id="dref"></select></label>
+    <select id="dall" aria-label="Set control for all samples"></select>
+  </div>
+  <p class="hint" id="dformula"></p>
+  <div class="tablewrap" id="delta"></div>
+  <div class="row" style="margin-top:14px"><span class="hint">Chart</span><button data-dm="dct">ΔCt ± SD</button><button data-dm="fold">Fold vs control</button></div>
+  <div class="chartbox"><canvas id="dchart" role="img" aria-label="ΔCt or fold change per sample">Bar chart</canvas></div>
+  <p id="dchartnote" class="hint"></p>
+
+  <h2>Replicate summary</h2>
+  <div class="tablewrap" id="summary"></div>
+
+  <details><summary>All wells</summary><div class="tablewrap" id="wells"></div></details>
+
+  <h2>Export</h2>
+  <div class="row">
+    <button id="xdelta">ΔCt table (CSV)</button><button id="xsum">Replicate summary (CSV)</button><button id="xwells">All wells (CSV)</button>
+    <button id="xplot">Current curve plot (PNG)</button><button id="xbar">ΔCt chart (PNG)</button><button id="xlayout">Plate layout (PNG)</button>
+  </div>
+  <p class="hint">Exports use this plate's current threshold, baseline and exclusions.</p>
+  </section>
+
+  <section id="compareview" hidden>
+  <h2>Run QC across plates</h2>
+    <div class="tablewrap" id="runqc"></div>
+  <p class="hint">Each plate keeps its own threshold, baseline, exclusions, ΔCt target/baseline and matched controls — set those on the plate's tab. Choose each plate's calibrator (usually the positive control) in the table; its ΔCt should be similar on every plate, and a large shift points to a run problem.</p>
+
+  <h2>ΔCt across plates</h2>
+  <div class="row"><span class="hint">Chart</span><button data-cm="dct">ΔCt ± SD</button><button data-cm="fold">Fold vs control</button><button data-cm="cal">ΔCt vs calibrator</button></div>
+  <div class="chartbox" style="height:380px"><canvas id="cchart" role="img" aria-label="ΔCt across plates">Bar chart</canvas></div>
+  <p id="cchartnote" class="hint"></p>
+  <div class="tablewrap" id="ctable"></div>
+
+  <h2>Overlay curves from different plates</h2>
+  <div class="filters" id="otargets"></div>
+  <div id="olist"></div>
+  <div class="plot"><canvas id="ochart" role="img" aria-label="Overlaid amplification curves from several plates">Overlay</canvas></div>
+  <p id="ohov" class="hint">Hover a curve to see its plate, well and Ct.</p>
+  <p id="ohint" class="hint"></p>
+
+  <h2>Export</h2>
+  <div class="row"><button id="xcmp">Comparison table (CSV)</button><button id="xcchart">Comparison chart (PNG)</button><button id="xochart">Overlay plot (PNG)</button></div>
+  </section>
+</div>
+
+<footer>qPCR Reader v2.0.0 · Cts are recalculated from the instrument's ΔRn. With a shared threshold they can differ slightly from QuantStudio's per-target values; choose "Per target" to match the instrument's approach.</footer>
+</main>
+<script>/*JSZIP*/</script>
+<script>/*XLSX*/</script>
+<script>/*CHARTJS*/</script>
+<script>/*CORE*/</script>
+<script>/*APP2*/</script>
+<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js');</script>
+</body>
+</html>
